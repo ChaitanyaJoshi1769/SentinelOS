@@ -1,18 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { ThreatNodeSchema, ThreatEdgeSchema, AttackPathSchema } from '@sentinelos/schema';
 import { getDatabase } from '@sentinelos/database';
+import {
+  successResponse,
+  validationError,
+  errorResponse,
+} from '@/lib/api-response';
+import { createLogger } from '@/lib/logger';
+import { getQueryParam, parseBody } from '@/lib/request';
+
+const logger = createLogger('threat-graph-api');
 
 /**
  * GET /api/threat-graph
  * Fetch threat graph nodes and edges
  */
 export async function GET(request: NextRequest) {
-  let db;
   try {
-    const { searchParams } = new URL(request.url);
-    const nodeType = searchParams.get('nodeType') || undefined;
+    const nodeType = getQueryParam(request, 'nodeType') || undefined;
 
-    db = getDatabase();
+    logger.debug('Fetching threat graph', { nodeType });
+
+    const db = getDatabase();
     const threatGraphRepository = db.getThreatGraphRepository();
 
     // Fetch nodes and edges from database
@@ -38,23 +47,16 @@ export async function GET(request: NextRequest) {
     const validatedEdges = edges.map((e) => ThreatEdgeSchema.parse(e));
     const validatedPaths = paths.map((p) => AttackPathSchema.parse(p));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        nodes: validatedNodes,
-        edges: validatedEdges,
-        paths: validatedPaths,
-      },
+    logger.info(`Fetched ${validatedNodes.length} nodes and ${validatedEdges.length} edges`);
+
+    return successResponse({
+      nodes: validatedNodes,
+      edges: validatedEdges,
+      paths: validatedPaths,
     });
   } catch (error) {
-    console.error('Error fetching threat graph:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch threat graph',
-      },
-      { status: 500 }
-    );
+    logger.error('Error fetching threat graph', error as Error);
+    return errorResponse('Failed to fetch threat graph', 500);
   }
 }
 
@@ -63,21 +65,19 @@ export async function GET(request: NextRequest) {
  * Analyze attack path
  */
 export async function POST(request: NextRequest) {
-  let db;
   try {
-    const body = await request.json();
+    const body = await parseBody(request);
 
     if (!body.source_node || !body.target_node) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'source_node and target_node are required',
-        },
-        { status: 400 }
-      );
+      return validationError('source_node and target_node are required');
     }
 
-    db = getDatabase();
+    logger.debug('Analyzing attack path', {
+      source: body.source_node,
+      target: body.target_node,
+    });
+
+    const db = getDatabase();
     const threatGraphRepository = db.getThreatGraphRepository();
 
     // Find attack paths between nodes
@@ -102,18 +102,11 @@ export async function POST(request: NextRequest) {
       ],
     };
 
-    return NextResponse.json({
-      success: true,
-      data: analysis,
-    });
+    logger.info(`Attack path analysis completed: ${paths.length} paths found`);
+
+    return successResponse(analysis);
   } catch (error) {
-    console.error('Error analyzing threat graph:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to analyze threat graph',
-      },
-      { status: 500 }
-    );
+    logger.error('Error analyzing threat graph', error as Error);
+    return errorResponse('Failed to analyze threat graph', 500);
   }
 }

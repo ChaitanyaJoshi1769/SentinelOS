@@ -1,18 +1,27 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { SecurityMetricSchema, ThreatActorSchema } from '@sentinelos/schema';
 import { getDatabase } from '@sentinelos/database';
+import {
+  successResponse,
+  validationError,
+  errorResponse,
+} from '@/lib/api-response';
+import { createLogger } from '@/lib/logger';
+import { getQueryParam, parseBody } from '@/lib/request';
+
+const logger = createLogger('analytics-api');
 
 /**
  * GET /api/analytics
  * Fetch security analytics and metrics
  */
 export async function GET(request: NextRequest) {
-  let db;
   try {
-    const { searchParams } = new URL(request.url);
-    const dateRange = searchParams.get('dateRange') || '30d';
+    const dateRange = getQueryParam(request, 'dateRange') || '30d';
 
-    db = getDatabase();
+    logger.debug('Fetching analytics', { dateRange });
+
+    const db = getDatabase();
     const analyticsRepository = db.getAnalyticsRepository();
 
     // Calculate date range
@@ -29,30 +38,23 @@ export async function GET(request: NextRequest) {
     const validatedMetrics = metrics.map((m) => SecurityMetricSchema.parse(m));
     const validatedThreats = threats.map((t) => ThreatActorSchema.parse(t));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        metrics: validatedMetrics,
-        threats: validatedThreats,
-        kpis: {
-          total_alerts: kpiSummary.totalAlerts,
-          critical_alerts: kpiSummary.criticalAlerts,
-          resolved_incidents: kpiSummary.resolvedIncidents,
-          avg_resolution_time: Math.round(kpiSummary.avgResolutionTime / 60), // Convert to minutes
-          mtbf: kpiSummary.mtbf,
-          mttr: Math.round(kpiSummary.mttr / 60), // Convert to minutes
-        },
+    logger.info(`Fetched ${validatedMetrics.length} metrics and ${validatedThreats.length} threats`);
+
+    return successResponse({
+      metrics: validatedMetrics,
+      threats: validatedThreats,
+      kpis: {
+        total_alerts: kpiSummary.totalAlerts,
+        critical_alerts: kpiSummary.criticalAlerts,
+        resolved_incidents: kpiSummary.resolvedIncidents,
+        avg_resolution_time: Math.round(kpiSummary.avgResolutionTime / 60),
+        mtbf: kpiSummary.mtbf,
+        mttr: Math.round(kpiSummary.mttr / 60),
       },
     });
   } catch (error) {
-    console.error('Error fetching analytics:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch analytics',
-      },
-      { status: 500 }
-    );
+    logger.error('Error fetching analytics', error as Error);
+    return errorResponse('Failed to fetch analytics', 500);
   }
 }
 
@@ -62,17 +64,13 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    const body = await parseBody(request);
 
     if (!body.format) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'format is required (pdf, csv, json)',
-        },
-        { status: 400 }
-      );
+      return validationError('format is required (pdf, csv, json)');
     }
+
+    logger.debug('Exporting analytics report', { format: body.format });
 
     const db = getDatabase();
     const analyticsRepository = db.getAnalyticsRepository();
@@ -98,18 +96,11 @@ export async function POST(request: NextRequest) {
       url: `/reports/report_${Date.now()}.${body.format}`,
     };
 
-    return NextResponse.json({
-      success: true,
-      data: report,
-    });
+    logger.info(`Report generated: ${report.report_id}`);
+
+    return successResponse(report, 201);
   } catch (error) {
-    console.error('Error exporting analytics:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to export analytics',
-      },
-      { status: 500 }
-    );
+    logger.error('Error exporting analytics', error as Error);
+    return errorResponse('Failed to export analytics', 500);
   }
 }

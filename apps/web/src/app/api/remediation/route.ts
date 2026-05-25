@@ -1,19 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import { RemediationActionSchema, ApprovalRequestSchema } from '@sentinelos/schema';
 import { getDatabase } from '@sentinelos/database';
+import {
+  successResponse,
+  validationError,
+  errorResponse,
+} from '@/lib/api-response';
+import { createLogger } from '@/lib/logger';
+import { getQueryParam, parseBody } from '@/lib/request';
+
+const logger = createLogger('remediation-api');
 
 /**
  * GET /api/remediation
  * Fetch remediation actions and approvals
  */
 export async function GET(request: NextRequest) {
-  let db;
   try {
-    const { searchParams } = new URL(request.url);
-    const actionType = searchParams.get('actionType') || undefined;
-    const status = searchParams.get('status') || undefined;
+    const actionType = getQueryParam(request, 'actionType') || undefined;
+    const status = getQueryParam(request, 'status') || undefined;
 
-    db = getDatabase();
+    logger.debug('Fetching remediation data', { actionType, status });
+
+    const db = getDatabase();
     const remediationRepository = db.getRemediationRepository();
 
     // Fetch actions and approvals from database
@@ -24,22 +33,15 @@ export async function GET(request: NextRequest) {
     const validatedActions = actions.map((a) => RemediationActionSchema.parse(a));
     const validatedApprovals = approvals.map((a) => ApprovalRequestSchema.parse(a));
 
-    return NextResponse.json({
-      success: true,
-      data: {
-        actions: validatedActions,
-        approvals: validatedApprovals,
-      },
+    logger.info(`Found ${validatedActions.length} actions and ${validatedApprovals.length} approvals`);
+
+    return successResponse({
+      actions: validatedActions,
+      approvals: validatedApprovals,
     });
   } catch (error) {
-    console.error('Error fetching remediation data:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to fetch remediation data',
-      },
-      { status: 500 }
-    );
+    logger.error('Error fetching remediation data', error as Error);
+    return errorResponse('Failed to fetch remediation data', 500);
   }
 }
 
@@ -48,21 +50,16 @@ export async function GET(request: NextRequest) {
  * Approve a remediation action
  */
 export async function POST(request: NextRequest) {
-  let db;
   try {
-    const body = await request.json();
+    const body = await parseBody(request);
 
     if (!body.request_id || !body.approver) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'request_id and approver are required',
-        },
-        { status: 400 }
-      );
+      return validationError('request_id and approver are required');
     }
 
-    db = getDatabase();
+    logger.debug('Approving remediation action', { request_id: body.request_id });
+
+    const db = getDatabase();
     const remediationRepository = db.getRemediationRepository();
 
     // Approve the action in database
@@ -75,18 +72,11 @@ export async function POST(request: NextRequest) {
     // Validate against schema
     const validated = ApprovalRequestSchema.parse(approval);
 
-    return NextResponse.json({
-      success: true,
-      data: validated,
-    });
+    logger.info(`Action approved: ${validated.request_id}`);
+
+    return successResponse(validated);
   } catch (error) {
-    console.error('Error approving remediation action:', error);
-    return NextResponse.json(
-      {
-        success: false,
-        error: error instanceof Error ? error.message : 'Failed to approve action',
-      },
-      { status: 500 }
-    );
+    logger.error('Error approving remediation action', error as Error);
+    return errorResponse('Failed to approve action', 500);
   }
 }
