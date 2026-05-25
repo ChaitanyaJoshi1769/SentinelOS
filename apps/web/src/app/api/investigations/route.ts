@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { InvestigationSchema, Investigation } from '@sentinelos/schema';
 
 /**
  * GET /api/investigations
@@ -8,10 +9,11 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
-    const limit = parseInt(searchParams.get('limit') || '50', 10);
+    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
+    const offset = parseInt(searchParams.get('offset') || '0', 10);
 
     // Mock data - in production, this would query a database
-    const mockInvestigations = [
+    const mockInvestigations: Investigation[] = [
       {
         investigation_id: 'inv_1',
         alert_id: 'alert_001',
@@ -76,20 +78,25 @@ export async function GET(request: NextRequest) {
       },
     ];
 
+    // Validate all investigations against schema
+    const validatedInvestigations = mockInvestigations.map((inv) =>
+      InvestigationSchema.parse(inv)
+    );
+
     // Filter by status if provided
-    let results = mockInvestigations;
+    let results = validatedInvestigations;
     if (status) {
       results = results.filter((inv) => inv.status === status);
     }
 
-    // Apply limit
-    results = results.slice(0, limit);
+    // Apply pagination
+    results = results.slice(offset, offset + limit);
 
     return NextResponse.json({
       success: true,
       data: results,
       count: results.length,
-      total: mockInvestigations.length,
+      total: validatedInvestigations.length,
     });
   } catch (error) {
     return NextResponse.json(

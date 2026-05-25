@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { SecurityMetricSchema, ThreatActorSchema } from '@sentinelos/schema';
 
 /**
  * GET /api/analytics
@@ -70,16 +71,20 @@ export async function GET(request: NextRequest) {
         100
     );
 
+    // Validate metrics and threats against schemas
+    const validatedMetrics = mockMetrics.map((m) => SecurityMetricSchema.parse(m));
+    const validatedThreats = mockThreats.map((t) => ThreatActorSchema.parse(t));
+
     return NextResponse.json({
       success: true,
       data: {
-        metrics: mockMetrics,
-        threats: mockThreats,
+        metrics: validatedMetrics,
+        threats: validatedThreats,
         kpis: {
           total_alerts: totalAlerts,
           avg_investigation_time: avgInvestigationTime,
           remediation_success_rate: avgRemediationRate,
-          critical_alerts: mockMetrics.reduce(
+          critical_alerts: validatedMetrics.reduce(
             (sum, m) => sum + m.alerts_critical,
             0
           ),

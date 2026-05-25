@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { ThreatNodeSchema, ThreatEdgeSchema, AttackPathSchema } from '@sentinelos/schema';
 
 /**
  * GET /api/threat-graph
@@ -105,8 +106,13 @@ export async function GET(request: NextRequest) {
       },
     ];
 
+    // Validate data against schemas
+    const validatedNodes = mockNodes.map((n) => ThreatNodeSchema.parse(n));
+    const validatedEdges = mockEdges.map((e) => ThreatEdgeSchema.parse(e));
+    const validatedPaths = mockPaths.map((p) => AttackPathSchema.parse(p));
+
     // Filter by node type if provided
-    let nodes = mockNodes;
+    let nodes = validatedNodes;
     if (nodeType) {
       nodes = nodes.filter((n) => n.entity_type === nodeType);
     }
@@ -115,8 +121,8 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         nodes,
-        edges: mockEdges,
-        paths: mockPaths,
+        edges: validatedEdges,
+        paths: validatedPaths,
       },
     });
   } catch (error) {

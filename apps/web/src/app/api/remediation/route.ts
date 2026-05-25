@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { RemediationActionSchema, ApprovalRequestSchema } from '@sentinelos/schema';
 
 /**
  * GET /api/remediation
@@ -54,13 +55,17 @@ export async function GET(request: NextRequest) {
       },
     ];
 
+    // Validate data against schemas
+    const validatedActions = mockActions.map((a) => RemediationActionSchema.parse(a));
+    const validatedApprovals = mockApprovals.map((a) => ApprovalRequestSchema.parse(a));
+
     // Filter by type if provided
-    let actions = mockActions;
+    let actions = validatedActions;
     if (actionType) {
       actions = actions.filter((a) => a.action_type === actionType);
     }
 
-    let approvals = mockApprovals;
+    let approvals = validatedApprovals;
     if (status) {
       approvals = approvals.filter((a) => a.status === status);
     }
