@@ -1,0 +1,89 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-base-100;
+  }
+}
+
+@layer components {
+  .card-threat-critical {
+    @apply border-l-4 border-threat-critical;
+  }
+
+  .card-threat-high {
+    @apply border-l-4 border-threat-high;
+  }
+
+  .card-threat-medium {
+    @apply border-l-4 border-threat-medium;
+  }
+
+  .card-threat-low {
+    @apply border-l-4 border-threat-low;
+  }
+
+  .badge-threat-critical {
+    @apply badge badge-error;
+  }
+
+  .badge-threat-high {
+    @apply badge badge-warning;
+  }
+
+  .badge-threat-medium {
+    @apply badge badge-info;
+  }
+
+  .badge-threat-low {
+    @apply badge badge-success;
+  }
+
+  .status-indicator {
+    @apply inline-flex items-center gap-2;
+  }
+
+  .status-indicator-active {
+    @apply text-success;
+  }
+
+  .status-indicator-warning {
+    @apply text-warning;
+  }
+
+  .status-indicator-error {
+    @apply text-error;
+  }
+}
+
+/* Smooth animations */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: oklch(var(--b3));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: oklch(var(--bc) / 0.7));
+}
