@@ -1,0 +1,24 @@
+{
+  "name": "@sentinelos/database",
+  "version": "0.1.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src --max-warnings 0",
+    "clean": "rm -rf dist",
+    "migrate": "node dist/migrations/run.js"
+  },
+  "dependencies": {
+    "@sentinelos/schema": "^0.1.0",
+    "pg": "^8.10.0",
+    "pino": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/pg": "^8.10.0",
+    "typescript": "^5.0.0"
+  }
+}
