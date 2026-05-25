@@ -1,0 +1,21 @@
+{
+  "name": "@sentinelos/agent-tools",
+  "version": "0.1.0",
+  "description": "Tool definitions and execution framework for autonomous agents",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@sentinelos/shared": "workspace:*",
+    "zod": "^3.22.4",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
