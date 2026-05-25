@@ -1,6 +1,9 @@
 import { Pool, QueryResult } from 'pg';
 import pino from 'pino';
 import { InvestigationRepository } from './repositories/investigation-repository';
+import { ThreatGraphRepository } from './repositories/threat-graph-repository';
+import { RemediationRepository } from './repositories/remediation-repository';
+import { AnalyticsRepository } from './repositories/analytics-repository';
 
 const logger = pino();
 
@@ -127,6 +130,27 @@ export class DatabaseClient {
    */
   getInvestigationRepository(): InvestigationRepository {
     return new InvestigationRepository(this);
+  }
+
+  /**
+   * Get Threat Graph Repository
+   */
+  getThreatGraphRepository(): ThreatGraphRepository {
+    return new ThreatGraphRepository(this);
+  }
+
+  /**
+   * Get Remediation Repository
+   */
+  getRemediationRepository(): RemediationRepository {
+    return new RemediationRepository(this);
+  }
+
+  /**
+   * Get Analytics Repository
+   */
+  getAnalyticsRepository(): AnalyticsRepository {
+    return new AnalyticsRepository(this);
   }
 
   /**

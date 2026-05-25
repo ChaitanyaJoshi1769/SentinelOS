@@ -1,87 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { RemediationActionSchema, ApprovalRequestSchema } from '@sentinelos/schema';
+import { getDatabase } from '@sentinelos/database';
 
 /**
  * GET /api/remediation
  * Fetch remediation actions and approvals
  */
 export async function GET(request: NextRequest) {
+  let db;
   try {
     const { searchParams } = new URL(request.url);
-    const actionType = searchParams.get('actionType');
-    const status = searchParams.get('status');
+    const actionType = searchParams.get('actionType') || undefined;
+    const status = searchParams.get('status') || undefined;
 
-    // Mock remediation data
-    const mockActions = [
-      {
-        action_id: 'action_1',
-        action_type: 'isolate',
-        target_type: 'endpoint',
-        target_id: 'endpoint_1',
-        severity: 'critical',
-        description: 'Isolate compromised workstation from network',
-        estimated_impact: 'User loses network access. Requires VPN reconnection.',
-        estimated_duration_seconds: 60,
-        rollback_possible: true,
-        requires_approval: true,
-        execution_order: 1,
-      },
-      {
-        action_id: 'action_2',
-        action_type: 'terminate',
-        target_type: 'process',
-        target_id: 'powershell.exe',
-        severity: 'high',
-        description: 'Terminate suspicious PowerShell process',
-        estimated_impact: 'Kills running PowerShell script. May interrupt user tasks.',
-        estimated_duration_seconds: 5,
-        rollback_possible: false,
-        requires_approval: true,
-        execution_order: 2,
-      },
-    ];
+    db = getDatabase();
+    const remediationRepository = db.getRemediationRepository();
 
-    const mockApprovals = [
-      {
-        request_id: 'approval_1',
-        action_id: 'action_1',
-        action_description: 'Isolate compromised workstation from network',
-        investigation_id: 'inv_1',
-        severity: 'critical',
-        requested_by: 'system',
-        requested_at: Date.now() - 600000,
-        status: 'pending',
-        expires_at: Date.now() + 1800000,
-      },
-    ];
+    // Fetch actions and approvals from database
+    const actions = await remediationRepository.findAllActions(actionType, status);
+    const approvals = await remediationRepository.findAllApprovals(status);
 
     // Validate data against schemas
-    const validatedActions = mockActions.map((a) => RemediationActionSchema.parse(a));
-    const validatedApprovals = mockApprovals.map((a) => ApprovalRequestSchema.parse(a));
-
-    // Filter by type if provided
-    let actions = validatedActions;
-    if (actionType) {
-      actions = actions.filter((a) => a.action_type === actionType);
-    }
-
-    let approvals = validatedApprovals;
-    if (status) {
-      approvals = approvals.filter((a) => a.status === status);
-    }
+    const validatedActions = actions.map((a) => RemediationActionSchema.parse(a));
+    const validatedApprovals = approvals.map((a) => ApprovalRequestSchema.parse(a));
 
     return NextResponse.json({
       success: true,
       data: {
-        actions,
-        approvals,
+        actions: validatedActions,
+        approvals: validatedApprovals,
       },
     });
   } catch (error) {
+    console.error('Error fetching remediation data:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to fetch remediation data',
       },
       { status: 500 }
     );
@@ -93,6 +48,7 @@ export async function GET(request: NextRequest) {
  * Approve a remediation action
  */
 export async function POST(request: NextRequest) {
+  let db;
   try {
     const body = await request.json();
 
@@ -106,24 +62,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock approval
-    const approval = {
-      request_id: body.request_id,
-      status: 'approved',
-      approver: body.approver,
-      approval_time: Date.now(),
-      approval_notes: body.notes || '',
-    };
+    db = getDatabase();
+    const remediationRepository = db.getRemediationRepository();
+
+    // Approve the action in database
+    const approval = await remediationRepository.approveAction(
+      body.request_id,
+      body.approver,
+      body.notes
+    );
+
+    // Validate against schema
+    const validated = ApprovalRequestSchema.parse(approval);
 
     return NextResponse.json({
       success: true,
-      data: approval,
+      data: validated,
     });
   } catch (error) {
+    console.error('Error approving remediation action:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to approve action',
       },
       { status: 500 }
     );

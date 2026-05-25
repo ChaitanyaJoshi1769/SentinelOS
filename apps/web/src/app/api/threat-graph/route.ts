@@ -1,135 +1,57 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ThreatNodeSchema, ThreatEdgeSchema, AttackPathSchema } from '@sentinelos/schema';
+import { getDatabase } from '@sentinelos/database';
 
 /**
  * GET /api/threat-graph
  * Fetch threat graph nodes and edges
  */
 export async function GET(request: NextRequest) {
+  let db;
   try {
     const { searchParams } = new URL(request.url);
-    const nodeType = searchParams.get('nodeType');
+    const nodeType = searchParams.get('nodeType') || undefined;
 
-    // Mock threat graph data
-    const mockNodes = [
-      {
-        node_id: 'endpoint_1',
-        entity_type: 'endpoint',
-        name: 'Compromised Workstation',
-        risk_score: 95,
-        compromised: true,
-        connections: 5,
-      },
-      {
-        node_id: 'file_server',
-        entity_type: 'server',
-        name: 'File Server',
-        risk_score: 85,
-        compromised: false,
-        connections: 3,
-      },
-      {
-        node_id: 'db_server',
-        entity_type: 'database',
-        name: 'Database Server',
-        risk_score: 90,
-        compromised: false,
-        connections: 4,
-      },
-      {
-        node_id: 'backup_system',
-        entity_type: 'storage',
-        name: 'Backup System',
-        risk_score: 75,
-        compromised: false,
-        connections: 2,
-      },
-      {
-        node_id: 'router_1',
-        entity_type: 'network',
-        name: 'Network Router',
-        risk_score: 60,
-        compromised: false,
-        connections: 4,
-      },
-    ];
+    db = getDatabase();
+    const threatGraphRepository = db.getThreatGraphRepository();
 
-    const mockEdges = [
-      {
-        edge_id: 'edge_1',
-        source_id: 'endpoint_1',
-        target_id: 'file_server',
-        relation_type: 'connected_to',
-        confidence: 0.95,
-      },
-      {
-        edge_id: 'edge_2',
-        source_id: 'endpoint_1',
-        target_id: 'db_server',
-        relation_type: 'can_access',
-        confidence: 0.85,
-      },
-      {
-        edge_id: 'edge_3',
-        source_id: 'file_server',
-        target_id: 'backup_system',
-        relation_type: 'replicates_to',
-        confidence: 0.9,
-      },
-      {
-        edge_id: 'edge_4',
-        source_id: 'endpoint_1',
-        target_id: 'router_1',
-        relation_type: 'communicates_via',
-        confidence: 0.88,
-      },
-    ];
+    // Fetch nodes and edges from database
+    const nodes = await threatGraphRepository.findAllNodes(nodeType);
+    const edges = await threatGraphRepository.findAllEdges();
 
-    const mockPaths = [
-      {
-        source: 'endpoint_1',
-        target: 'file_server',
-        hops: 1,
-        risk_score: 0.92,
-      },
-      {
-        source: 'endpoint_1',
-        target: 'db_server',
-        hops: 2,
-        risk_score: 0.88,
-      },
-      {
-        source: 'endpoint_1',
-        target: 'backup_system',
-        hops: 3,
-        risk_score: 0.85,
-      },
-    ];
-
-    // Validate data against schemas
-    const validatedNodes = mockNodes.map((n) => ThreatNodeSchema.parse(n));
-    const validatedEdges = mockEdges.map((e) => ThreatEdgeSchema.parse(e));
-    const validatedPaths = mockPaths.map((p) => AttackPathSchema.parse(p));
-
-    // Filter by node type if provided
-    let nodes = validatedNodes;
-    if (nodeType) {
-      nodes = nodes.filter((n) => n.entity_type === nodeType);
+    // Find all attack paths
+    const paths: any[] = [];
+    for (const source of nodes) {
+      for (const target of nodes) {
+        if (source.node_id !== target.node_id) {
+          const targetPaths = await threatGraphRepository.findAttackPaths(
+            source.node_id,
+            target.node_id
+          );
+          paths.push(...targetPaths);
+        }
+      }
     }
+
+    // Validate all data against schemas
+    const validatedNodes = nodes.map((n) => ThreatNodeSchema.parse(n));
+    const validatedEdges = edges.map((e) => ThreatEdgeSchema.parse(e));
+    const validatedPaths = paths.map((p) => AttackPathSchema.parse(p));
 
     return NextResponse.json({
       success: true,
       data: {
-        nodes,
+        nodes: validatedNodes,
         edges: validatedEdges,
         paths: validatedPaths,
       },
     });
   } catch (error) {
+    console.error('Error fetching threat graph:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to fetch threat graph',
       },
       { status: 500 }
     );
@@ -141,6 +63,7 @@ export async function GET(request: NextRequest) {
  * Analyze attack path
  */
 export async function POST(request: NextRequest) {
+  let db;
   try {
     const body = await request.json();
 
@@ -154,18 +77,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock path analysis
+    db = getDatabase();
+    const threatGraphRepository = db.getThreatGraphRepository();
+
+    // Find attack paths between nodes
+    const paths = await threatGraphRepository.findAttackPaths(
+      body.source_node,
+      body.target_node
+    );
+
     const analysis = {
       source: body.source_node,
       target: body.target_node,
-      paths: [
-        {
-          hops: 2,
-          path: [body.source_node, 'intermediate_node', body.target_node],
-          risk_score: 0.87,
-          techniques: ['T1566.002', 'T1087.004', 'T1021.001'],
-        },
-      ],
+      paths: paths.map((p) => ({
+        hops: p.hops,
+        risk_score: p.risk_score,
+        techniques: body.techniques || [],
+      })),
       critical_nodes: [body.source_node, body.target_node],
       recommendations: [
         'Isolate compromised endpoint',
@@ -179,10 +107,11 @@ export async function POST(request: NextRequest) {
       data: analysis,
     });
   } catch (error) {
+    console.error('Error analyzing threat graph:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to analyze threat graph',
       },
       { status: 500 }
     );
