@@ -12,8 +12,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sentinelos/shared": "*",
-    "@sentinelos/threat-graph": "*",
+    "@sentinelos/shared": "^0.1.0",
+    "@sentinelos/threat-graph": "^0.1.0",
     "kafkajs": "^2.2.4",
     "pg": "^8.10.0",
     "clickhouse": "^2.6.0",

@@ -11,12 +11,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sentinelos/shared": "*",
-    "@sentinelos/threat-graph": "*",
-    "langgraph": "^0.0.20",
-    "langchain": "^0.1.0",
-    "anthropic": "^0.7.8",
-    "openai": "^1.3.0",
+    "@sentinelos/shared": "^0.1.0",
+    "@sentinelos/threat-graph": "^0.1.0",
+    "@anthropic-ai/sdk": "^0.24.0",
     "uuid": "^9.0.0",
     "pino": "^8.16.0"
   },

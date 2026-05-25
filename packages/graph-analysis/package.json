@@ -10,8 +10,8 @@
     "test": "jest"
   },
   "dependencies": {
-    "@sentinelos/shared": "workspace:*",
-    "@sentinelos/threat-graph": "workspace:*",
+    "@sentinelos/shared": "^0.1.0",
+    "@sentinelos/threat-graph": "^0.1.0",
     "pino": "^8.17.2"
   },
   "devDependencies": {
