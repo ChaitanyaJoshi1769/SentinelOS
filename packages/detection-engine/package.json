@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@sentinelos/shared": "^0.1.0",
+    "@sentinelos/shared": "workspace:*",
     "yaml": "^2.4.0",
     "js-yaml": "^4.1.0",
     "pino": "^8.17.2"

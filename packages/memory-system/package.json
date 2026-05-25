@@ -10,7 +10,7 @@
     "test": "jest"
   },
   "dependencies": {
-    "@sentinelos/shared": "^0.1.0",
+    "@sentinelos/shared": "workspace:*",
     "pino": "^8.17.2"
   },
   "devDependencies": {

@@ -1,5 +1,6 @@
 import { Pool, QueryResult } from 'pg';
 import pino from 'pino';
+import { InvestigationRepository } from './repositories/investigation-repository';
 
 const logger = pino();
 
@@ -119,6 +120,13 @@ export class DatabaseClient {
     } catch {
       return false;
     }
+  }
+
+  /**
+   * Get Investigation Repository
+   */
+  getInvestigationRepository(): InvestigationRepository {
+    return new InvestigationRepository(this);
   }
 
   /**

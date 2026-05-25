@@ -12,7 +12,7 @@
     "migrate": "node dist/migrations/run.js"
   },
   "dependencies": {
-    "@sentinelos/schema": "^0.1.0",
+    "@sentinelos/schema": "workspace:*",
     "pg": "^8.10.0",
     "pino": "^8.16.0"
   },

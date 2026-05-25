@@ -1,108 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { InvestigationSchema, Investigation } from '@sentinelos/schema';
+import { InvestigationSchema } from '@sentinelos/schema';
+import { getDatabase } from '@sentinelos/database';
 
 /**
  * GET /api/investigations
  * Fetch investigations with optional filtering
  */
 export async function GET(request: NextRequest) {
+  let db;
   try {
     const { searchParams } = new URL(request.url);
-    const status = searchParams.get('status');
+    const status = searchParams.get('status') || undefined;
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
     const offset = parseInt(searchParams.get('offset') || '0', 10);
 
-    // Mock data - in production, this would query a database
-    const mockInvestigations: Investigation[] = [
-      {
-        investigation_id: 'inv_1',
-        alert_id: 'alert_001',
-        created_at: Date.now() - 3600000,
-        updated_at: Date.now() - 300000,
-        status: 'complete',
-        confidence: 0.92,
-        findings: [
-          {
-            title: 'Suspicious Process Creation',
-            description: 'PowerShell execution from unusual parent process',
-            severity: 'high',
-            evidence: ['powershell.exe', 'explorer.exe parent'],
-          },
-          {
-            title: 'Network Communication',
-            description: 'Connection to known C2 infrastructure',
-            severity: 'critical',
-            evidence: ['192.168.1.100:443', 'TLS handshake detected'],
-          },
-        ],
-        timeline: [
-          {
-            timestamp: Date.now() - 3600000,
-            event_type: 'alert',
-            entity_id: 'endpoint_1',
-            description: 'Initial alert triggered',
-            severity: 'high',
-            source_system: 'detection_engine',
-          },
-        ],
-        recommendations: [
-          'Isolate endpoint from network immediately',
-          'Reset credentials for affected user',
-          'Block C2 infrastructure at firewall',
-        ],
-        ai_narrative:
-          'Investigation revealed a confirmed compromise with high confidence (92%). Attacker executed suspicious PowerShell commands after gaining initial access via phishing.',
-      },
-      {
-        investigation_id: 'inv_2',
-        alert_id: 'alert_002',
-        created_at: Date.now() - 7200000,
-        updated_at: Date.now(),
-        status: 'complete',
-        confidence: 0.67,
-        findings: [
-          {
-            title: 'Unusual Login Activity',
-            description: 'Multiple failed login attempts followed by success',
-            severity: 'medium',
-            evidence: ['5 failed attempts', 'Different IP addresses'],
-          },
-        ],
-        timeline: [],
-        recommendations: [
-          'Review user account for unauthorized activity',
-          'Enable MFA for the user',
-        ],
-        ai_narrative:
-          'Possible brute force attempt with eventual compromise. Medium confidence due to mixed indicators.',
-      },
-    ];
+    db = getDatabase();
+    const investigationRepository = db.getInvestigationRepository();
+
+    // Fetch investigations from database
+    const result = await investigationRepository.findAll(limit, offset, status);
 
     // Validate all investigations against schema
-    const validatedInvestigations = mockInvestigations.map((inv) =>
+    const validatedInvestigations = result.data.map((inv) =>
       InvestigationSchema.parse(inv)
     );
 
-    // Filter by status if provided
-    let results = validatedInvestigations;
-    if (status) {
-      results = results.filter((inv) => inv.status === status);
-    }
-
-    // Apply pagination
-    results = results.slice(offset, offset + limit);
-
     return NextResponse.json({
       success: true,
-      data: results,
-      count: results.length,
-      total: validatedInvestigations.length,
+      data: validatedInvestigations,
+      count: validatedInvestigations.length,
+      total: result.total,
     });
   } catch (error) {
+    console.error('Error fetching investigations:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to fetch investigations',
       },
       { status: 500 }
     );
@@ -114,6 +48,7 @@ export async function GET(request: NextRequest) {
  * Create a new investigation
  */
 export async function POST(request: NextRequest) {
+  let db;
   try {
     const body = await request.json();
 
@@ -128,32 +63,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Mock investigation creation
-    const newInvestigation = {
-      investigation_id: `inv_${Date.now()}`,
+    db = getDatabase();
+    const investigationRepository = db.getInvestigationRepository();
+
+    // Create investigation in database
+    const newInvestigation = await investigationRepository.create({
       alert_id: body.alert_id,
-      created_at: Date.now(),
-      updated_at: Date.now(),
-      status: 'open',
-      confidence: 0,
-      findings: [],
-      timeline: [],
-      recommendations: [],
-      ai_narrative: '',
-    };
+      status: body.status || 'open',
+      confidence: body.confidence || 0,
+      findings: body.findings || [],
+      timeline: body.timeline || [],
+      recommendations: body.recommendations || [],
+      ai_narrative: body.ai_narrative || '',
+    });
+
+    // Validate against schema
+    const validated = InvestigationSchema.parse(newInvestigation);
 
     return NextResponse.json(
       {
         success: true,
-        data: newInvestigation,
+        data: validated,
       },
       { status: 201 }
     );
   } catch (error) {
+    console.error('Error creating investigation:', error);
     return NextResponse.json(
       {
         success: false,
-        error: String(error),
+        error: error instanceof Error ? error.message : 'Failed to create investigation',
       },
       { status: 500 }
     );

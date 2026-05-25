@@ -11,8 +11,8 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "@sentinelos/shared": "^0.1.0",
-    "@sentinelos/threat-graph": "^0.1.0",
+    "@sentinelos/schema": "workspace:*",
+    "@sentinelos/database": "workspace:*",
     "@anthropic-ai/sdk": "^0.24.0",
     "uuid": "^9.0.0",
     "pino": "^8.16.0"
