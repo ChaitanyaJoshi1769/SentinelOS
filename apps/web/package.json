@@ -32,7 +32,8 @@
     "js-cookie": "^3.0.0",
     "jotai": "^2.7.0",
     "react-hotkeys-hook": "^4.4.0",
-    "zod": "^3.22.0"
+    "zod": "^3.22.0",
+    "jose": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",
