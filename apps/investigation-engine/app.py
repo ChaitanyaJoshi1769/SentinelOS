@@ -1,14 +1,15 @@
 """
 SentinelOS Investigation Engine
-Autonomous AI-driven security investigation service using LangGraph
+Autonomous AI-driven security investigation service with multi-agent orchestration
 """
 
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.responses import StreamingResponse
 import json
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Optional
 from datetime import datetime
+import asyncio
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,7 +19,7 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="SentinelOS Investigation Engine",
     description="Autonomous AI-driven security investigation platform",
-    version="0.1.0"
+    version="0.2.0"
 )
 
 # ============================================================================
