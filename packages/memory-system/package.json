@@ -1,0 +1,20 @@
+{
+  "name": "@sentinelos/memory-system",
+  "version": "0.1.0",
+  "description": "Memory system for autonomous agents - episodic, semantic, and procedural memory",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest"
+  },
+  "dependencies": {
+    "@sentinelos/shared": "workspace:*",
+    "pino": "^8.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.3"
+  }
+}
